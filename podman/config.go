@@ -9,6 +9,10 @@ import (
 	"go.podman.io/podman/v6/pkg/bindings"
 )
 
+type Connection struct {
+	ctx context.Context
+}
+
 // getIdentity retrieves the SSH identity path for the Podman machine.
 // It executes 'podman machine inspect' to get the identity path.
 func getIdentity() string {
@@ -44,7 +48,7 @@ func getHostName() string {
 
 // ConnectPodman establishes a connection to the Podman service.
 // It returns a context that carries the connection information for use with other Podman functions.
-func ConnectPodman() context.Context {
+func ConnectPodman() Connection {
 	identity := getIdentity()
 	uri := getHostName()
 
@@ -57,6 +61,5 @@ func ConnectPodman() context.Context {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	return conn
+	return Connection{conn}
 }

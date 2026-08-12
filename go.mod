@@ -42,8 +42,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
-	github.com/google/go-containerregistry v0.21.5 // indirect
+	github.com/google/go-github/v90 v90.0.0 // indirect
 	github.com/google/go-intervals v0.0.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
