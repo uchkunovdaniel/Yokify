@@ -58,7 +58,7 @@ func (connection *Connection) CreateContainerFromImage(image string) types.Conta
 	return container
 }
 
-func (connection *Connection) CreateContainerFromFile(dockerfile []string) types.ContainerCreateResponse {
-	img := connection.CreateImage(dockerfile)
+func (connection *Connection) CreateContainerFromFile(projectRoot string) types.ContainerCreateResponse {
+	img := connection.CreateImage(projectRoot)
 	return connection.CreateContainerFromImage(img.ID)
 }

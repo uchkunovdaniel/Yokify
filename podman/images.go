@@ -2,6 +2,7 @@ package podman
 
 import (
 	"fmt"
+	"path"
 
 	"go.podman.io/podman/v6/pkg/bindings/images"
 	"go.podman.io/podman/v6/pkg/domain/entities/types"
@@ -44,11 +45,14 @@ func (connection *Connection) RemoveImages(imagesList []string) {
 // CreateImage performs a container image build on the remote API using the standard build API.
 // Prepares build contexts and container files by creating tar archives from local directories, processes build secrets and authentication, and streams the build to the remote server.
 // Returns a BuildReport containing the final image ID and save format.
-func (connection *Connection) CreateImage(containerfile []string) *types.BuildReport {
-	img, err := images.Build(connection.ctx, containerfile, types.BuildOptions{})
+func (connection *Connection) CreateImage(projectRoot string) *types.BuildReport {
+	containerfile := path.Join(projectRoot, "Containerfile")
+	img, err := images.Build(connection.ctx, []string{containerfile}, types.BuildOptions{
+		ContextDirectory: projectRoot,
+	})
 	if err != nil {
 		fmt.Println(err)
-		return nil
+		return &types.BuildReport{}
 	}
 	fmt.Println("Created Image", img.ID)
 	return img
