@@ -235,6 +235,9 @@ dist
 go.work
 go.work.sum
 
+test
+
+
 
 !/LICENSE
 
