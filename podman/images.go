@@ -12,6 +12,8 @@ func (connection *Connection) PullImage(image string) {
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	fmt.Println("Pulled Image", image)
 }
 
 func (connection *Connection) GetImages() []*types.ImageSummary {
@@ -19,6 +21,9 @@ func (connection *Connection) GetImages() []*types.ImageSummary {
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	fmt.Println(imagesList)
+
 	return imagesList
 }
 
@@ -27,6 +32,7 @@ func (connection *Connection) RemoveImages(imagesList []string) {
 	if err != nil {
 		fmt.Println(err)
 	}
+	fmt.Println("Removed Images", imagesList)
 }
 
 func (connection *Connection) CreateImage(dockerfile []string) *types.BuildReport {
@@ -34,5 +40,14 @@ func (connection *Connection) CreateImage(dockerfile []string) *types.BuildRepor
 	if err != nil {
 		fmt.Println(err)
 	}
+	fmt.Println("Created Image", img.ID)
 	return img
+}
+
+func ImageSummary2StrArray(images []*types.ImageSummary) []string {
+	strings := make([]string, len(images))
+	for i, img := range images {
+		strings[i] = img.ID
+	}
+	return strings
 }
