@@ -12,6 +12,7 @@ func (connection *Connection) PullImage(image string) {
 	_, err := images.Pull(connection.ctx, image, nil)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 
 	fmt.Println("Pulled Image", image)
@@ -22,6 +23,7 @@ func (connection *Connection) GetImages() []*types.ImageSummary {
 	imagesList, err := images.List(connection.ctx, nil)
 	if err != nil {
 		fmt.Println(err)
+		return nil
 	}
 
 	fmt.Println(imagesList)
@@ -34,6 +36,7 @@ func (connection *Connection) RemoveImages(imagesList []string) {
 	_, err := images.Remove(connection.ctx, imagesList, nil)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 	fmt.Println("Removed Images", imagesList)
 }
@@ -45,6 +48,7 @@ func (connection *Connection) CreateImage(containerfile []string) *types.BuildRe
 	img, err := images.Build(connection.ctx, containerfile, types.BuildOptions{})
 	if err != nil {
 		fmt.Println(err)
+		return nil
 	}
 	fmt.Println("Created Image", img.ID)
 	return img
