@@ -41,8 +41,8 @@ func (connection *Connection) RemoveImages(imagesList []string) {
 // CreateImage performs a container image build on the remote API using the standard build API.
 // Prepares build contexts and container files by creating tar archives from local directories, processes build secrets and authentication, and streams the build to the remote server.
 // Returns a BuildReport containing the final image ID and save format.
-func (connection *Connection) CreateImage(dockerfile []string) *types.BuildReport {
-	img, err := images.Build(connection.ctx, dockerfile, types.BuildOptions{})
+func (connection *Connection) CreateImage(containerfile []string) *types.BuildReport {
+	img, err := images.Build(connection.ctx, containerfile, types.BuildOptions{})
 	if err != nil {
 		fmt.Println(err)
 	}
