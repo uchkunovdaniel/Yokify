@@ -1,6 +1,7 @@
 package podman
 
 import (
+	"errors"
 	"fmt"
 	"path"
 
@@ -9,53 +10,33 @@ import (
 )
 
 // PullImage pulls an image from a registry
-func (connection *Connection) PullImage(image string) {
-	_, err := images.Pull(connection.ctx, image, nil)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	fmt.Println("Pulled Image", image)
+func (connection *Connection) PullImage(image string) ([]string, error) {
+	return images.Pull(connection.ctx, image, nil)
 }
 
 // GetImages returns a list of images in local storage.
-func (connection *Connection) GetImages() []*types.ImageSummary {
-	imagesList, err := images.List(connection.ctx, nil)
-	if err != nil {
-		fmt.Println(err)
-		return nil
-	}
-
-	fmt.Println(imagesList)
-
-	return imagesList
+func (connection *Connection) GetImages() ([]*types.ImageSummary, error) {
+	return images.List(connection.ctx, nil)
 }
 
 // RemoveImages removes one or more images from the local storage.
-func (connection *Connection) RemoveImages(imagesList []string) {
-	_, err := images.Remove(connection.ctx, imagesList, nil)
-	if err != nil {
-		fmt.Println(err)
-		return
+func (connection *Connection) RemoveImages(imagesList []string) error {
+	_, errs := images.Remove(connection.ctx, imagesList, nil)
+	if err := errors.Join(errs...); err != nil {
+		return fmt.Errorf("remove images %v: %w", imagesList, err)
 	}
-	fmt.Println("Removed Images", imagesList)
+	return nil
 }
 
 // CreateImage performs a container image build on the remote API using the standard build API.
-// Prepares build contexts and container files by creating tar archives from local directories, processes build secrets and authentication, and streams the build to the remote server.
+// Prepares build contexts and container files by creating tar archives from local directories,
+// processes build secrets and authentication, and streams the build to the remote server.
 // Returns a BuildReport containing the final image ID and save format.
-func (connection *Connection) CreateImage(projectRoot string) *types.BuildReport {
+func (connection *Connection) CreateImage(projectRoot string) (*types.BuildReport, error) {
 	containerfile := path.Join(projectRoot, "Containerfile")
-	img, err := images.Build(connection.ctx, []string{containerfile}, types.BuildOptions{
+	return images.Build(connection.ctx, []string{containerfile}, types.BuildOptions{
 		ContextDirectory: projectRoot,
 	})
-	if err != nil {
-		fmt.Println(err)
-		return &types.BuildReport{}
-	}
-	fmt.Println("Created Image", img.ID)
-	return img
 }
 
 // ImageSummary2StrSlice converts a slice of ImageSummary objects to a slice of strings containing the image IDs.

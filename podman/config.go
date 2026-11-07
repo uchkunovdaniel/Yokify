@@ -2,7 +2,6 @@ package podman
 
 import (
 	"context"
-	"log"
 	"os/exec"
 	"strings"
 
@@ -15,43 +14,48 @@ type Connection struct {
 
 // getIdentity retrieves the SSH identity path for the Podman machine.
 // It executes 'podman machine inspect' to get the identity path.
-func getIdentity() string {
+func getIdentity() (string, error) {
 	identityOut, err := exec.Command("podman", "machine", "inspect", "--format", "{{.SSHConfig.IdentityPath}}").Output()
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
-	return strings.TrimSpace(string(identityOut))
+	return strings.TrimSpace(string(identityOut)), nil
 }
 
 // getHostName finds the default Podman connection URI.
 // It parses the list of system connections to find the one marked as default.
-func getHostName() string {
+func getHostName() (string, error) {
 	hostName, err := exec.Command("podman", "system", "connection", "list", "--format", "{{.URI}}").Output()
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	isDefault, err := exec.Command("podman", "system", "connection", "list", "--format", "{{.Default}}").Output()
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	isDefaultSlice := strings.Split(string(isDefault), "\n")
 	for i := range isDefaultSlice {
 		if isDefaultSlice[i] == "true" {
-			return strings.TrimSpace(strings.Split(string(hostName), "\n")[i])
+			return strings.TrimSpace(strings.Split(string(hostName), "\n")[i]), nil
 		}
 	}
-	return strings.TrimSpace(strings.Split(string(hostName), "\n")[0])
+	return strings.TrimSpace(strings.Split(string(hostName), "\n")[0]), nil
 }
 
 // ConnectPodman establishes a connection to the Podman service.
 // It returns a context that carries the connection information for use with other Podman functions.
-func ConnectPodman() Connection {
-	identity := getIdentity()
-	uri := getHostName()
-
+func ConnectPodman() (Connection, error) {
+	identity, err := getIdentity()
+	if err != nil {
+		return Connection{}, err
+	}
+	uri, err := getHostName()
+	if err != nil {
+		return Connection{}, err
+	}
 	conn, err := bindings.NewConnectionWithIdentity(
 		context.Background(),
 		uri,
@@ -59,7 +63,7 @@ func ConnectPodman() Connection {
 		false,
 	)
 	if err != nil {
-		log.Fatal(err)
+		return Connection{}, err
 	}
-	return Connection{conn}
+	return Connection{conn}, nil
 }
