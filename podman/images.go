@@ -11,7 +11,7 @@ import (
 )
 
 type CreateImageOptions struct {
-	Containerfile string `default:"Containerfile"`
+	Containerfile string
 }
 
 // PullImage pulls an image from a registry
@@ -38,12 +38,11 @@ func (connection *Connection) RemoveImages(imagesList []string) error {
 // processes build secrets and authentication, and streams the build to the remote server.
 // Returns a BuildReport containing the final image ID and save format.
 func (connection *Connection) CreateImage(projectRoot string, name string, options *CreateImageOptions) (*types.BuildReport, error) {
-	if options == nil {
-		options = &CreateImageOptions{}
-		options.Containerfile = "Containerfile"
+	file := "Containerfile"
+	if options != nil && options.Containerfile != "" {
+		file = options.Containerfile
 	}
-
-	containerfile := filepath.Join(projectRoot, options.Containerfile)
+	containerfile := filepath.Join(projectRoot, file)
 	return images.Build(connection.ctx, []string{containerfile}, types.BuildOptions{
 		BuildOptions: define.BuildOptions{
 			ContextDirectory: projectRoot,
