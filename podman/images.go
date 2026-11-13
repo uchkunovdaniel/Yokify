@@ -3,11 +3,16 @@ package podman
 import (
 	"errors"
 	"fmt"
-	"path"
+	"path/filepath"
 
+	"go.podman.io/buildah/define"
 	"go.podman.io/podman/v6/pkg/bindings/images"
 	"go.podman.io/podman/v6/pkg/domain/entities/types"
 )
+
+type CreateImageOptions struct {
+	Containerfile string `default:"Containerfile"`
+}
 
 // PullImage pulls an image from a registry
 func (connection *Connection) PullImage(image string) ([]string, error) {
@@ -32,18 +37,17 @@ func (connection *Connection) RemoveImages(imagesList []string) error {
 // Prepares build contexts and container files by creating tar archives from local directories,
 // processes build secrets and authentication, and streams the build to the remote server.
 // Returns a BuildReport containing the final image ID and save format.
-func (connection *Connection) CreateImage(projectRoot string) (*types.BuildReport, error) {
-	containerfile := path.Join(projectRoot, "Containerfile")
-	return images.Build(connection.ctx, []string{containerfile}, types.BuildOptions{
-		ContextDirectory: projectRoot,
-	})
-}
-
-// ImageSummary2StrSlice converts a slice of ImageSummary objects to a slice of strings containing the image IDs.
-func ImageSummary2StrSlice(images []*types.ImageSummary) []string {
-	strings := make([]string, len(images))
-	for i, img := range images {
-		strings[i] = img.ID
+func (connection *Connection) CreateImage(projectRoot string, name string, options *CreateImageOptions) (*types.BuildReport, error) {
+	if options == nil {
+		options = &CreateImageOptions{}
+		options.Containerfile = "Containerfile"
 	}
-	return strings
+
+	containerfile := filepath.Join(projectRoot, options.Containerfile)
+	return images.Build(connection.ctx, []string{containerfile}, types.BuildOptions{
+		BuildOptions: define.BuildOptions{
+			ContextDirectory: projectRoot,
+			Output:           name,
+		},
+	})
 }

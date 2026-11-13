@@ -62,8 +62,8 @@ func (connection *Connection) CreateContainerFromImage(image string) (types.Cont
 
 // CreateContainerFromFile creates a new container from a Dockerfile.
 // It takes the project root directory as an argument and returns a ContainerCreateResponse containing details about the newly created container.
-func (connection *Connection) CreateContainerFromFile(projectRoot string) (types.ContainerCreateResponse, error) {
-	img, err := connection.CreateImage(projectRoot)
+func (connection *Connection) CreateContainerFromFile(projectRoot string, name string, options *CreateImageOptions) (types.ContainerCreateResponse, error) {
+	img, err := connection.CreateImage(projectRoot, name, options)
 	if err != nil {
 		return types.ContainerCreateResponse{}, err
 	}
