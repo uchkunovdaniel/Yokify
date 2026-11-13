@@ -2,6 +2,9 @@ package podman
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"os/exec"
 	"strings"
 
@@ -12,58 +15,60 @@ type Connection struct {
 	ctx context.Context
 }
 
-// getIdentity retrieves the SSH identity path for the Podman machine.
-// It executes 'podman machine inspect' to get the identity path.
-func getIdentity() (string, error) {
-	identityOut, err := exec.Command("podman", "machine", "inspect", "--format", "{{.SSHConfig.IdentityPath}}").Output()
-	if err != nil {
-		return "", err
-	}
-
-	return strings.TrimSpace(string(identityOut)), nil
+// SystemConnection is one entry from `podman system connection list`.
+type SystemConnection struct {
+	Name      string `json:"Name"`
+	URI       string `json:"URI"`
+	Identity  string `json:"Identity"`
+	IsMachine bool   `json:"IsMachine"`
+	Default   bool   `json:"Default"`
+	ReadWrite bool   `json:"ReadWrite"`
 }
 
-// getHostName finds the default Podman connection URI.
-// It parses the list of system connections to find the one marked as default.
-func getHostName() (string, error) {
-	hostName, err := exec.Command("podman", "system", "connection", "list", "--format", "{{.URI}}").Output()
+// GetConnections returns the Podman system connections configured on this host.
+func GetConnections() ([]SystemConnection, error) {
+	out, err := exec.Command("podman", "system", "connection", "list", "--format", "json").Output()
 	if err != nil {
-		return "", err
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			return nil, fmt.Errorf("podman system connection list: %w: %s",
+				err, strings.TrimSpace(string(exitErr.Stderr)))
+		}
+		return nil, fmt.Errorf("podman system connection list: %w", err)
 	}
 
-	isDefault, err := exec.Command("podman", "system", "connection", "list", "--format", "{{.Default}}").Output()
-	if err != nil {
-		return "", err
+	var conns []SystemConnection
+	if err := json.Unmarshal(out, &conns); err != nil {
+		return nil, fmt.Errorf("parse podman connection list: %w", err)
 	}
+	if len(conns) == 0 {
+		return nil, errors.New("no podman connections configured")
+	}
+	return conns, nil
+}
 
-	isDefaultSlice := strings.Split(string(isDefault), "\n")
-	for i := range isDefaultSlice {
-		if isDefaultSlice[i] == "true" {
-			return strings.TrimSpace(strings.Split(string(hostName), "\n")[i]), nil
+// defaultConnection returns the connection marked as default, or the first one.
+func defaultConnection(conns []SystemConnection) SystemConnection {
+	for _, c := range conns {
+		if c.Default {
+			return c
 		}
 	}
-	return strings.TrimSpace(strings.Split(string(hostName), "\n")[0]), nil
+	return conns[0]
 }
 
 // ConnectPodman establishes a connection to the Podman service.
 // It returns a context that carries the connection information for use with other Podman functions.
 func ConnectPodman() (Connection, error) {
-	identity, err := getIdentity()
+	conns, err := GetConnections()
 	if err != nil {
 		return Connection{}, err
 	}
-	uri, err := getHostName()
+	c := defaultConnection(conns)
+
+	ctx, err := bindings.NewConnectionWithIdentity(context.Background(), c.URI, c.Identity, c.IsMachine)
 	if err != nil {
-		return Connection{}, err
+		return Connection{}, fmt.Errorf("connect to podman %q: %w", c.Name, err)
 	}
-	conn, err := bindings.NewConnectionWithIdentity(
-		context.Background(),
-		uri,
-		identity,
-		false,
-	)
-	if err != nil {
-		return Connection{}, err
-	}
-	return Connection{conn}, nil
+	return Connection{ctx}, nil
 }
