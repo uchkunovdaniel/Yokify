@@ -3,7 +3,9 @@ package podman
 import (
 	"errors"
 	"fmt"
+	"io"
 	"path/filepath"
+	"strings"
 
 	"go.podman.io/buildah/define"
 	"go.podman.io/podman/v6/pkg/bindings/images"
@@ -12,6 +14,7 @@ import (
 
 type CreateImageOptions struct {
 	Containerfile string
+	Out           io.Writer
 }
 
 // PullImage pulls an image from a registry
@@ -37,16 +40,17 @@ func (connection *Connection) RemoveImages(imagesList []string) error {
 // Prepares build contexts and container files by creating tar archives from local directories,
 // processes build secrets and authentication, and streams the build to the remote server.
 // Returns a BuildReport containing the final image ID and save format.
-func (connection *Connection) CreateImage(projectRoot string, name string, options *CreateImageOptions) (*types.BuildReport, error) {
+func (connection *Connection) CreateImage(projectRoot string, name string, options CreateImageOptions) (*types.BuildReport, error) {
 	file := "Containerfile"
-	if options != nil && options.Containerfile != "" {
+	if options.Containerfile != "" {
 		file = options.Containerfile
 	}
 	containerfile := filepath.Join(projectRoot, file)
 	return images.Build(connection.ctx, []string{containerfile}, types.BuildOptions{
 		BuildOptions: define.BuildOptions{
 			ContextDirectory: projectRoot,
-			Output:           name,
+			Output:           strings.ToLower(name),
+			Out:              options.Out,
 		},
 	})
 }
