@@ -1,3 +1,4 @@
+// Package podman wraps the Podman API for Yōkify.
 package podman
 
 import (
@@ -12,6 +13,7 @@ import (
 	"go.podman.io/podman/v6/pkg/domain/entities/types"
 )
 
+// CreateImageOptions defines options for creating an image from a Dockerfile/Containerfile.
 type CreateImageOptions struct {
 	Containerfile string
 	Out           io.Writer
@@ -44,6 +46,13 @@ func (connection *Connection) CreateImage(projectRoot string, name string, optio
 	file := "Containerfile"
 	if options.Containerfile != "" {
 		file = options.Containerfile
+	}
+	if name == "" {
+		abs, err := filepath.Abs(projectRoot)
+		if err != nil {
+			return nil, err
+		}
+		name = filepath.Base(abs)
 	}
 	containerfile := filepath.Join(projectRoot, file)
 	return images.Build(connection.ctx, []string{containerfile}, types.BuildOptions{

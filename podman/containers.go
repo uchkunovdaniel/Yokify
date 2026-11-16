@@ -60,8 +60,9 @@ func (connection *Connection) CreateContainerFromImage(image string) (types.Cont
 	return containers.CreateWithSpec(connection.ctx, spec, nil)
 }
 
-// CreateContainerFromFile creates a new container from a Dockerfile.
-// It takes the project root directory as an argument and returns a ContainerCreateResponse containing details about the newly created container.
+// CreateContainerFromFile creates a new container from a Dockerfile/Containerfile.
+// It takes the project root directory as an argument and returns a
+// ContainerCreateResponse containing details about the newly created container.
 func (connection *Connection) CreateContainerFromFile(projectRoot string, name string, options CreateImageOptions) (types.ContainerCreateResponse, error) {
 	img, err := connection.CreateImage(projectRoot, name, options)
 	if err != nil {

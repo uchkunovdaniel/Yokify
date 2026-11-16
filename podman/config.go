@@ -11,6 +11,7 @@ import (
 	"go.podman.io/podman/v6/pkg/bindings"
 )
 
+// Connection represents a connection to the Podman service.
 type Connection struct {
 	ctx context.Context
 }
