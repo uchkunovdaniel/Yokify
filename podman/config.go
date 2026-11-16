@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"go.podman.io/podman/v6/pkg/bindings"
@@ -60,16 +63,53 @@ func defaultConnection(conns []SystemConnection) SystemConnection {
 
 // ConnectPodman establishes a connection to the Podman service.
 // It returns a context that carries the connection information for use with other Podman functions.
-func ConnectPodman() (Connection, error) {
-	conns, err := GetConnections()
-	if err != nil {
-		return Connection{}, err
+func ConnectPodman() (*Connection, error) {
+	if host := os.Getenv("CONTAINER_HOST"); host != "" {
+		return connect(SystemConnection{
+			Name: "CONTAINER_HOST", URI: host,
+			Identity: os.Getenv("CONTAINER_SSHKEY"),
+		})
 	}
-	c := defaultConnection(conns)
+	conns, err := GetConnections()
+	if err == nil {
+		return connect(defaultConnection(conns))
+	}
+	if runtime.GOOS != "linux" {
+		return nil, err
+	}
 
+	errs := []error{err}
+	for _, path := range localSocketPaths() {
+		if _, statErr := os.Stat(path); statErr != nil {
+			continue // socket doesn't exist, try the next one
+		}
+		conn, connErr := connect(SystemConnection{Name: "local", URI: "unix://" + path})
+		if connErr == nil {
+			return conn, nil
+		}
+		errs = append(errs, connErr)
+	}
+	errs = append(errs, errors.New("no Podman socket found; enable it with: systemctl --user enable --now podman.socket"))
+	return nil, errors.Join(errs...)
+}
+
+func localSocketPaths() []string {
+	var paths []string
+	if dir := os.Getenv("XDG_RUNTIME_DIR"); dir != "" {
+		paths = append(paths, filepath.Join(dir, "podman", "podman.sock"))
+	}
+	paths = append(
+		paths,
+		fmt.Sprintf("/run/user/%d/podman/podman.sock", os.Getuid()), // rootless
+		"/run/podman/podman.sock",                                   // rootful
+	)
+	return paths
+}
+
+func connect(c SystemConnection) (*Connection, error) {
 	ctx, err := bindings.NewConnectionWithIdentity(context.Background(), c.URI, c.Identity, c.IsMachine)
 	if err != nil {
-		return Connection{}, fmt.Errorf("connect to podman %q: %w", c.Name, err)
+		return nil, fmt.Errorf("connect to podman %q (%s): %w", c.Name, c.URI, err)
 	}
-	return Connection{ctx}, nil
+	return &Connection{ctx: ctx}, nil
 }
