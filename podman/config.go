@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"go.podman.io/podman/v6/pkg/bindings"
 )
@@ -33,8 +34,7 @@ type SystemConnection struct {
 func GetConnections() ([]SystemConnection, error) {
 	out, err := exec.Command("podman", "system", "connection", "list", "--format", "json").Output()
 	if err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			return nil, fmt.Errorf("podman system connection list: %w: %s",
 				err, strings.TrimSpace(string(exitErr.Stderr)))
 		}
@@ -63,16 +63,16 @@ func defaultConnection(conns []SystemConnection) SystemConnection {
 
 // ConnectPodman establishes a connection to the Podman service.
 // It returns a context that carries the connection information for use with other Podman functions.
-func ConnectPodman() (*Connection, error) {
+func ConnectPodman(ctx context.Context) (*Connection, error) {
 	if host := os.Getenv("CONTAINER_HOST"); host != "" {
-		return connect(SystemConnection{
+		return connect(ctx, SystemConnection{
 			Name: "CONTAINER_HOST", URI: host,
 			Identity: os.Getenv("CONTAINER_SSHKEY"),
 		})
 	}
 	conns, err := GetConnections()
 	if err == nil {
-		return connect(defaultConnection(conns))
+		return connect(ctx, defaultConnection(conns))
 	}
 	if runtime.GOOS != "linux" {
 		return nil, err
@@ -83,7 +83,7 @@ func ConnectPodman() (*Connection, error) {
 		if _, statErr := os.Stat(path); statErr != nil {
 			continue // socket doesn't exist, try the next one
 		}
-		conn, connErr := connect(SystemConnection{Name: "local", URI: "unix://" + path})
+		conn, connErr := connect(ctx, SystemConnection{Name: "local", URI: "unix://" + path})
 		if connErr == nil {
 			return conn, nil
 		}
@@ -106,10 +106,28 @@ func localSocketPaths() []string {
 	return paths
 }
 
-func connect(c SystemConnection) (*Connection, error) {
-	ctx, err := bindings.NewConnectionWithIdentity(context.Background(), c.URI, c.Identity, c.IsMachine)
+func connect(ctx context.Context, c SystemConnection) (*Connection, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	conn, err := bindings.NewConnectionWithIdentity(ctx, c.URI, c.Identity, c.IsMachine)
 	if err != nil {
 		return nil, fmt.Errorf("connect to podman %q (%s): %w", c.Name, c.URI, err)
 	}
-	return &Connection{ctx: ctx}, nil
+	return &Connection{ctx: context.WithoutCancel(conn)}, nil
+}
+
+// call returns a context that carries the Podman connection and is
+// canceled when ctx is (request closed, timeout). Always call the stop func.
+func (connection *Connection) call(ctx context.Context) (context.Context, func()) {
+	merged, cancel := context.WithCancelCause(connection.ctx)
+	stop := context.AfterFunc(ctx,
+		func() {
+			cancel(context.Cause(ctx))
+		})
+
+	return merged, func() {
+		stop()
+		cancel(nil)
+	}
 }

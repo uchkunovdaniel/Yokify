@@ -2,10 +2,7 @@ module Yokify
 
 go 1.27.0
 
-require (
-	go.podman.io/buildah v1.46.0
-	go.podman.io/podman/v6 v6.2.0
-)
+require go.podman.io/podman/v6 v6.2.0
 
 require (
 	cyphar.com/go-pathrs v0.2.6 // indirect
@@ -119,6 +116,7 @@ require (
 	go.opentelemetry.io/otel/log v1.47.0 // indirect
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect
 	go.opentelemetry.io/otel/trace v1.47.0 // indirect
+	go.podman.io/buildah v1.46.0 // indirect
 	go.podman.io/common v0.70.0 // indirect
 	go.podman.io/image/v5 v5.42.1 // indirect
 	go.podman.io/storage v1.65.1 // indirect

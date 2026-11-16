@@ -1,6 +1,7 @@
 package podman
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -10,13 +11,18 @@ import (
 )
 
 // GetContainers includes both running and stopped containers.
-func (connection *Connection) GetContainers() ([]types.ListContainer, error) {
-	return containers.List(connection.ctx, &containers.ListOptions{All: new(true)})
+func (connection *Connection) GetContainers(ctx context.Context) ([]types.ListContainer, error) {
+	ctx, done := connection.call(ctx)
+	defer done()
+	return containers.List(ctx, &containers.ListOptions{All: new(true)})
 }
 
 // RemoveContainer deletes a container identified by its name or ID.
-func (connection *Connection) RemoveContainer(container string, force bool) error {
-	rmReports, err := containers.Remove(connection.ctx, container, &containers.RemoveOptions{
+func (connection *Connection) RemoveContainer(ctx context.Context, container string, force bool) error {
+	ctx, done := connection.call(ctx)
+	defer done()
+
+	rmReports, err := containers.Remove(ctx, container, &containers.RemoveOptions{
 		Force: &force,
 	})
 	if err != nil {
@@ -37,36 +43,48 @@ func (connection *Connection) RemoveContainer(container string, force bool) erro
 
 // StartContainer starts a non-running container.
 // The argument can be a container name or a partial/full ID.
-func (connection *Connection) StartContainer(container string) error {
-	return containers.Start(connection.ctx, container, nil)
+func (connection *Connection) StartContainer(ctx context.Context, container string) error {
+	ctx, done := connection.call(ctx)
+	defer done()
+	return containers.Start(ctx, container, nil)
 }
 
 // StopContainer stops a running container.
 // The argument can be a container name or a partial/full ID.
-func (connection *Connection) StopContainer(container string) error {
-	return containers.Stop(connection.ctx, container, nil)
+func (connection *Connection) StopContainer(ctx context.Context, container string) error {
+	ctx, done := connection.call(ctx)
+	defer done()
+
+	return containers.Stop(ctx, container, nil)
 }
 
 // RestartContainer restarts a running container.
 // The argument can be a container name or a partial/full ID.
-func (connection *Connection) RestartContainer(container string) error {
-	return containers.Restart(connection.ctx, container, nil)
+func (connection *Connection) RestartContainer(ctx context.Context, container string) error {
+	ctx, done := connection.call(ctx)
+	defer done()
+	return containers.Restart(ctx, container, nil)
 }
 
 // CreateContainerFromImage creates a new container from an existing image.
 // It takes the image name or ID as an argument and returns a ContainerCreateResponse containing details about the newly created container.
-func (connection *Connection) CreateContainerFromImage(image string) (types.ContainerCreateResponse, error) {
+func (connection *Connection) CreateContainerFromImage(ctx context.Context, image string) (types.ContainerCreateResponse, error) {
+	ctx, done := connection.call(ctx)
+	defer done()
+
 	spec := specgen.NewSpecGenerator(image, false)
-	return containers.CreateWithSpec(connection.ctx, spec, nil)
+	return containers.CreateWithSpec(ctx, spec, nil)
 }
 
 // CreateContainerFromFile creates a new container from a Dockerfile/Containerfile.
 // It takes the project root directory as an argument and returns a
 // ContainerCreateResponse containing details about the newly created container.
-func (connection *Connection) CreateContainerFromFile(projectRoot string, name string, options CreateImageOptions) (types.ContainerCreateResponse, error) {
-	img, err := connection.CreateImage(projectRoot, name, options)
+func (connection *Connection) CreateContainerFromFile(
+	ctx context.Context, projectRoot string, name string, options CreateImageOptions,
+) (types.ContainerCreateResponse, error) {
+	img, err := connection.CreateImage(ctx, projectRoot, name, options)
 	if err != nil {
 		return types.ContainerCreateResponse{}, err
 	}
-	return connection.CreateContainerFromImage(img.ID)
+	return connection.CreateContainerFromImage(ctx, img.ID)
 }
