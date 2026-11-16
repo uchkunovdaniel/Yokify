@@ -50,7 +50,7 @@ func (connection *Connection) CreateImage(projectRoot string, name string, optio
 	if name == "" {
 		abs, err := filepath.Abs(projectRoot)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("resolve project path %q: %w", projectRoot, err)
 		}
 		name = filepath.Base(abs)
 	}
