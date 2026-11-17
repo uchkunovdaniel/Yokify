@@ -5,10 +5,27 @@ import (
 	"errors"
 	"fmt"
 
+	nettypes "go.podman.io/common/libnetwork/types"
 	"go.podman.io/podman/v6/pkg/bindings/containers"
 	"go.podman.io/podman/v6/pkg/domain/entities/types"
 	"go.podman.io/podman/v6/pkg/specgen"
 )
+
+// PortMapping publishes a container port on the host.
+type PortMapping struct {
+	HostIP        string // "" = all interfaces; use "127.0.0.1" for this machine only
+	HostPort      uint16 // 0 = Podman picks a free port
+	ContainerPort uint16 // required
+	Protocol      string // "tcp" (default), "udp" or "sctp"
+}
+
+// CreateContainerOptions configures a new container. Every field is optional.
+type CreateContainerOptions struct {
+	Name  string            // "" = Podman generates one
+	Ports []PortMapping     // published ports
+	Env   map[string]string // environment variables
+	Start bool              // start the container after creating it
+}
 
 // GetContainers includes both running and stopped containers.
 func (connection *Connection) GetContainers(ctx context.Context) ([]types.ListContainer, error) {
@@ -68,23 +85,44 @@ func (connection *Connection) RestartContainer(ctx context.Context, container st
 
 // CreateContainerFromImage creates a new container from an existing image.
 // It takes the image name or ID as an argument and returns a ContainerCreateResponse containing details about the newly created container.
-func (connection *Connection) CreateContainerFromImage(ctx context.Context, image string) (types.ContainerCreateResponse, error) {
+func (connection *Connection) CreateContainerFromImage(ctx context.Context, image string, options CreateContainerOptions) (types.ContainerCreateResponse, error) {
 	ctx, done := connection.call(ctx)
 	defer done()
 
 	spec := specgen.NewSpecGenerator(image, false)
-	return containers.CreateWithSpec(ctx, spec, nil)
+	spec.Name = options.Name
+	spec.Env = options.Env
+	for _, p := range options.Ports {
+		if p.ContainerPort == 0 {
+			return types.ContainerCreateResponse{}, fmt.Errorf("port mapping %+v: container port is required", p)
+		}
+		spec.PortMappings = append(spec.PortMappings, nettypes.PortMapping{
+			HostIP:        p.HostIP,
+			HostPort:      p.HostPort,
+			ContainerPort: p.ContainerPort,
+			Protocol:      p.Protocol,
+		})
+	}
+
+	resp, err := containers.CreateWithSpec(ctx, spec, nil)
+	if err != nil {
+		return resp, fmt.Errorf("create container from %s: %w", image, err)
+	}
+	if options.Start {
+		if errStart := containers.Start(ctx, resp.ID, nil); errStart != nil {
+			return resp, fmt.Errorf("start container %s: %w", resp.ID, errStart)
+		}
+	}
+	return resp, nil
 }
 
 // CreateContainerFromFile creates a new container from a Dockerfile/Containerfile.
 // It takes the project root directory as an argument and returns a
 // ContainerCreateResponse containing details about the newly created container.
-func (connection *Connection) CreateContainerFromFile(
-	ctx context.Context, projectRoot string, name string, options CreateImageOptions,
-) (types.ContainerCreateResponse, error) {
-	img, err := connection.CreateImage(ctx, projectRoot, name, options)
+func (connection *Connection) CreateContainerFromFile(ctx context.Context, projectRoot string, name string, containerOptions CreateContainerOptions, imageOptions CreateImageOptions) (types.ContainerCreateResponse, error) {
+	img, err := connection.CreateImage(ctx, projectRoot, name, imageOptions)
 	if err != nil {
 		return types.ContainerCreateResponse{}, err
 	}
-	return connection.CreateContainerFromImage(ctx, img.ID)
+	return connection.CreateContainerFromImage(ctx, img.ID, containerOptions)
 }
