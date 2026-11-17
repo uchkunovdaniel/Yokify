@@ -219,9 +219,7 @@ dist
 *.so
 *.dylib
 *.app
-/*
-!/*.*
-!/*/
+
 # Test binary, built with `go test -c`
 *.test
 
@@ -234,6 +232,9 @@ dist
 # Go workspace file
 go.work
 go.work.sum
+
+test
+
 
 
 !/LICENSE
