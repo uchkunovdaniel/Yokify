@@ -1,3 +1,4 @@
+// Package main
 package main
 
 import (
@@ -23,7 +24,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	srv := &http.Server{Addr: ":8080", Handler: server.New(pm).Handler(), ReadHeaderTimeout: 5 * time.Second}
+	srv := &http.Server{Addr: "127.0.0.1:8080", Handler: server.New(pm).Handler(), ReadHeaderTimeout: 5 * time.Second}
 	go func() {
 		if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			log.Fatal(err)
