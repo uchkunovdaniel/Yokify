@@ -68,11 +68,17 @@ func (connection *Connection) StartContainer(ctx context.Context, container stri
 
 // StopContainer stops a running container.
 // The argument can be a container name or a partial/full ID.
-func (connection *Connection) StopContainer(ctx context.Context, container string) error {
+func (connection *Connection) StopContainer(ctx context.Context, container string, timeout uint) error {
 	ctx, done := connection.call(ctx)
 	defer done()
+	return containers.Stop(ctx, container, new(containers.StopOptions).WithTimeout(timeout))
+}
 
-	return containers.Stop(ctx, container, nil)
+// KillContainer force stops a container. DANGEROUS!
+func (connection *Connection) KillContainer(ctx context.Context, container string) error {
+	ctx, done := connection.call(ctx)
+	defer done()
+	return containers.Kill(ctx, container, new(containers.KillOptions).WithSignal("SIGKILL"))
 }
 
 // RestartContainer restarts a running container.
