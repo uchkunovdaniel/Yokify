@@ -1,4 +1,4 @@
-// Package server
+// Package server serves the ui and exposes the REST endpoints
 package server
 
 import (
