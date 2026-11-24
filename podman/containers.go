@@ -98,6 +98,7 @@ func (connection *Connection) CreateContainerFromImage(ctx context.Context, imag
 	spec := specgen.NewSpecGenerator(image, false)
 	spec.Name = options.Name
 	spec.Env = options.Env
+	spec.Init = new(true)
 	for _, p := range options.Ports {
 		if p.ContainerPort == 0 {
 			return types.ContainerCreateResponse{}, fmt.Errorf("port mapping %+v: container port is required", p)
