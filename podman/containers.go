@@ -85,7 +85,9 @@ func (connection *Connection) RestartContainer(ctx context.Context, container st
 
 // CreateContainerFromImage creates a new container from an existing image.
 // It takes the image name or ID as an argument and returns a ContainerCreateResponse containing details about the newly created container.
-func (connection *Connection) CreateContainerFromImage(ctx context.Context, image string, options CreateContainerOptions) (types.ContainerCreateResponse, error) {
+func (connection *Connection) CreateContainerFromImage(ctx context.Context, image string,
+	options CreateContainerOptions,
+) (types.ContainerCreateResponse, error) {
 	ctx, done := connection.call(ctx)
 	defer done()
 
@@ -119,7 +121,9 @@ func (connection *Connection) CreateContainerFromImage(ctx context.Context, imag
 // CreateContainerFromFile creates a new container from a Dockerfile/Containerfile.
 // It takes the project root directory as an argument and returns a
 // ContainerCreateResponse containing details about the newly created container.
-func (connection *Connection) CreateContainerFromFile(ctx context.Context, projectRoot string, name string, containerOptions CreateContainerOptions, imageOptions CreateImageOptions) (types.ContainerCreateResponse, error) {
+func (connection *Connection) CreateContainerFromFile(ctx context.Context, projectRoot string, name string,
+	containerOptions CreateContainerOptions, imageOptions CreateImageOptions,
+) (types.ContainerCreateResponse, error) {
 	img, err := connection.CreateImage(ctx, projectRoot, name, imageOptions)
 	if err != nil {
 		return types.ContainerCreateResponse{}, err

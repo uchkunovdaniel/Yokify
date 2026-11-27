@@ -1,0 +1,118 @@
+definitions:
+  podman.PortMapping:
+    properties:
+      containerPort:
+        description: required
+        format: int32
+        type: integer
+      hostIP:
+        description: '"" = all interfaces; use "127.0.0.1" for this machine only'
+        type: string
+      hostPort:
+        description: 0 = Podman picks a free port
+        format: int32
+        type: integer
+      protocol:
+        description: '"tcp" (default), "udp" or "sctp"'
+        type: string
+    type: object
+  server.createContainerRequest:
+    properties:
+      env:
+        additionalProperties:
+          type: string
+        type: object
+      image:
+        type: string
+      name:
+        type: string
+      ports:
+        items:
+          $ref: '#/definitions/podman.PortMapping'
+        type: array
+      start:
+        type: boolean
+    type: object
+info:
+  contact: {}
+paths:
+  /api/containers:
+    get:
+      description: get-containers
+      responses: {}
+      summary: get-containers
+      tags:
+      - Server
+    post:
+      description: create-container-from-image
+      parameters:
+      - description: container
+        in: body
+        name: container
+        required: true
+        schema:
+          $ref: '#/definitions/server.createContainerRequest'
+      responses: {}
+      summary: create-container-from-image
+      tags:
+      - Server
+  /api/containers/{id}:
+    delete:
+      description: remove-container
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      summary: remove-container
+      tags:
+      - Server
+  /api/containers/{id}/start:
+    post:
+      description: start-container
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      summary: start-container
+      tags:
+      - Server
+  /api/containers/{id}/stop:
+    post:
+      description: stop-container
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      summary: stop-container
+      tags:
+      - Server
+  /api/images:
+    get:
+      description: get-images
+      responses: {}
+      summary: get-images
+      tags:
+      - Server
+  /api/images/{image}:
+    delete:
+      description: remove-images
+      parameters:
+      - description: image
+        in: path
+        name: image
+        required: true
+        type: string
+      responses: {}
+      summary: remove-images
+      tags:
+      - Server
+swagger: "2.0"
