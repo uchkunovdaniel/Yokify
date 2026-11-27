@@ -68,17 +68,11 @@ func (connection *Connection) StartContainer(ctx context.Context, container stri
 
 // StopContainer stops a running container.
 // The argument can be a container name or a partial/full ID.
-func (connection *Connection) StopContainer(ctx context.Context, container string, timeout uint) error {
+func (connection *Connection) StopContainer(ctx context.Context, container string) error {
 	ctx, done := connection.call(ctx)
 	defer done()
-	return containers.Stop(ctx, container, new(containers.StopOptions).WithTimeout(timeout))
-}
 
-// KillContainer force stops a container. DANGEROUS!
-func (connection *Connection) KillContainer(ctx context.Context, container string) error {
-	ctx, done := connection.call(ctx)
-	defer done()
-	return containers.Kill(ctx, container, new(containers.KillOptions).WithSignal("SIGKILL"))
+	return containers.Stop(ctx, container, nil)
 }
 
 // RestartContainer restarts a running container.
@@ -98,7 +92,6 @@ func (connection *Connection) CreateContainerFromImage(ctx context.Context, imag
 	spec := specgen.NewSpecGenerator(image, false)
 	spec.Name = options.Name
 	spec.Env = options.Env
-	spec.Init = new(true)
 	for _, p := range options.Ports {
 		if p.ContainerPort == 0 {
 			return types.ContainerCreateResponse{}, fmt.Errorf("port mapping %+v: container port is required", p)
